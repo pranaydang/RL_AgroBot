@@ -22,7 +22,7 @@ def loss_fn(rewards, prob_selected, gamma):
         r_k = 0.0
         for k in range(i,len(rewards)):
             r_k += (gamma**(k-i))*rewards[k]
-        loss -= r_k*torch.log(prob_selected[i]+1e-8)
+        loss -= r_k*torch.log(prob_selected[i].squeeze()+1e-8)
 
     return loss
 

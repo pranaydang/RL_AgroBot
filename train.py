@@ -14,19 +14,20 @@ def build_policy_model():
     
     return Model()
     
-def loss_fn(rewards, prob_selected, gamma):
+def loss_fn(rewards, prob_selected, gamma, device):
 
-    loss = torch.tensor(0.0)
+    loss = torch.tensor(0.0, device=device)
+    mean = torch.mean(rewards).unsqueeze()
 
     for i in range(len(rewards)):
-        r_k = 0.0
+        r_k = 0
         for k in range(i,len(rewards)):
             r_k += (gamma**(k-i))*rewards[k]
         loss -= r_k*torch.log(prob_selected[i].squeeze()+1e-8)
 
     return loss
 
-def run_episode(env, policy_model):
+def run_episode(env, policy_model, device):
 
     prob_selected = []
     rewards = []
@@ -54,16 +55,24 @@ def run_episode(env, policy_model):
         prob_selected.append(prob)
         rewards.append(reward)
 
+        if done or truncated:
+            break
+    
+    rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
+    prob_selected = torch.tensor(prob_selected, dtype=torch.float32, device=device)
+
     return prob_selected, rewards
 
 def train(env, policy_model, optimizer, n_episodes):
+
+    device = next(policy_model.parameters()).device
 
     for episode in range(n_episodes):
 
         print(episode)
         
-        prob_selected, rewards = run_episode(env, policy_model)
-        loss = loss_fn(rewards, prob_selected, gamma=0.99)
+        prob_selected, rewards = run_episode(env, policy_model, device)
+        loss = loss_fn(rewards, prob_selected, device=device, gamma=0.99)
 
         print(loss)
 
@@ -85,7 +94,7 @@ if __name__ == "__main__":
 
     print("model done")
 
-    optimizer = torch.optim.Adam(policy_model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(policy_model.parameters(), lr=5e-6)
 
     train(env, policy_model, optimizer, n_episodes=10)
 

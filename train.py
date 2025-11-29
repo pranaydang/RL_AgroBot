@@ -17,13 +17,21 @@ def build_policy_model():
 def loss_fn(rewards, prob_selected, gamma, device):
 
     loss = torch.tensor(0.0, device=device)
-    mean = torch.mean(rewards).unsqueeze()
+    prob_selected = torch.cat(prob_selected).squeeze()
+    # mean = torch.mean(rewards).unsqueeze()
+    returns = []
 
     for i in range(len(rewards)):
         r_k = 0
         for k in range(i,len(rewards)):
             r_k += (gamma**(k-i))*rewards[k]
-        loss -= r_k*torch.log(prob_selected[i].squeeze()+1e-8)
+        returns.append(r_k)
+    
+    returns = torch.tensor(returns, dtype=torch.float32, device=device)
+    
+    returns -= returns.mean()
+
+    loss = -torch.sum(returns * torch.log(prob_selected + 1e-8))
 
     return loss
 
@@ -59,7 +67,7 @@ def run_episode(env, policy_model, device):
             break
     
     rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
-    prob_selected = torch.tensor(prob_selected, dtype=torch.float32, device=device)
+    # prob_selected = torch.tensor(prob_selected, dtype=torch.float32, device=device)
 
     return prob_selected, rewards
 
